@@ -913,10 +913,7 @@ public class HttpParser
                         if (_endOfContent != EndOfContent.CHUNKED_CONTENT)
                         {
                             _contentLength=convertContentLength(_valueString);
-                            if (_contentLength <= 0)
-                                _endOfContent=EndOfContent.NO_CONTENT;
-                            else
-                                _endOfContent=EndOfContent.CONTENT_LENGTH;
+                            _endOfContent=EndOfContent.CONTENT_LENGTH;
                         }
                         break;
 
@@ -989,15 +986,21 @@ public class HttpParser
 
     private long convertContentLength(String valueString)
     {
-        try
+        if (valueString == null || valueString.length() == 0)
+            throw new BadMessageException("Invalid Content-Length Value", new NumberFormatException());
+
+        long value = 0;
+        int length = valueString.length();
+
+        for (int i = 0; i < length; i++)
         {
-            return Long.parseLong(valueString);
+            char c = valueString.charAt(i);
+            if (c < '0' || c > '9')
+                throw new BadMessageException("Invalid Content-Length Value", new NumberFormatException());
+
+            value = Math.addExact(Math.multiplyExact(value, 10L), c - '0');
         }
-        catch(NumberFormatException e)
-        {
-            LOG.ignore(e);
-            throw new BadMessageException(HttpStatus.BAD_REQUEST_400,"Invalid Content-Length Value");
-        }
+        return value;
     }
 
     /* ------------------------------------------------------------------------------- */

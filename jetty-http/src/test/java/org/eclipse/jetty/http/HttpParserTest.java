@@ -1491,69 +1491,30 @@ public class HttpParserTest
     }
 
     @Test
-    public void testBadContentLength0() throws Exception
+    public void testBadContentLengths() throws Exception
     {
-        ByteBuffer buffer = BufferUtil.toBuffer(
-                "GET / HTTP/1.0\r\n"
-                        + "Content-Length: abc\r\n"
-                        + "Connection: close\r\n"
-                        + "\r\n");
+        String[] badLengths = {"abc", "1.5", "9999999999999999999999999999999999999999999999", "-10", "+10", "1.0", "1,0", "10,"};
+        for (String contentLength : badLengths)
+        {
+            _bad = null;
+            ByteBuffer buffer = BufferUtil.toBuffer(
+                    "GET /test HTTP/1.1\r\n"
+                            + "Host: localhost\r\n"
+                            + "Content-Length: " + contentLength + "\r\n"
+                            + "\r\n"
+                            + "1234567890\r\n");
 
-        HttpParser.RequestHandler handler = new Handler();
-        HttpParser parser = new HttpParser(handler);
+            HttpParser.RequestHandler handler = new Handler();
+            HttpParser parser = new HttpParser(handler);
+            parseAll(parser, buffer);
 
-        parser.parseNext(buffer);
-        Assert.assertEquals("GET", _methodOrVersion);
-        Assert.assertEquals("Invalid Content-Length Value", _bad);
-        Assert.assertFalse(buffer.hasRemaining());
-        Assert.assertEquals(HttpParser.State.CLOSE, parser.getState());
-        parser.atEOF();
-        parser.parseNext(BufferUtil.EMPTY_BUFFER);
-        Assert.assertEquals(HttpParser.State.CLOSED, parser.getState());
-    }
-
-    @Test
-    public void testBadContentLength1() throws Exception
-    {
-        ByteBuffer buffer = BufferUtil.toBuffer(
-                "GET / HTTP/1.0\r\n"
-                        + "Content-Length: 9999999999999999999999999999999999999999999999\r\n"
-                        + "Connection: close\r\n"
-                        + "\r\n");
-
-        HttpParser.RequestHandler handler = new Handler();
-        HttpParser parser = new HttpParser(handler);
-
-        parser.parseNext(buffer);
-        Assert.assertEquals("GET", _methodOrVersion);
-        Assert.assertEquals("Invalid Content-Length Value", _bad);
-        Assert.assertFalse(buffer.hasRemaining());
-        Assert.assertEquals(HttpParser.State.CLOSE, parser.getState());
-        parser.atEOF();
-        parser.parseNext(BufferUtil.EMPTY_BUFFER);
-        Assert.assertEquals(HttpParser.State.CLOSED, parser.getState());
-    }
-
-    @Test
-    public void testBadContentLength2() throws Exception
-    {
-        ByteBuffer buffer = BufferUtil.toBuffer(
-                "GET / HTTP/1.0\r\n"
-                        + "Content-Length: 1.5\r\n"
-                        + "Connection: close\r\n"
-                        + "\r\n");
-
-        HttpParser.RequestHandler handler = new Handler();
-        HttpParser parser = new HttpParser(handler);
-
-        parser.parseNext(buffer);
-        Assert.assertEquals("GET", _methodOrVersion);
-        Assert.assertEquals("Invalid Content-Length Value", _bad);
-        Assert.assertFalse(buffer.hasRemaining());
-        Assert.assertEquals(HttpParser.State.CLOSE, parser.getState());
-        parser.atEOF();
-        parser.parseNext(BufferUtil.EMPTY_BUFFER);
-        Assert.assertEquals(HttpParser.State.CLOSED, parser.getState());
+            Assert.assertNotNull("Expected bad message for Content-Length: " + contentLength, _bad);
+            Assert.assertFalse(buffer.hasRemaining());
+            Assert.assertEquals(HttpParser.State.CLOSE, parser.getState());
+            parser.atEOF();
+            parser.parseNext(BufferUtil.EMPTY_BUFFER);
+            Assert.assertEquals(HttpParser.State.CLOSED, parser.getState());
+        }
     }
 
     @Test
