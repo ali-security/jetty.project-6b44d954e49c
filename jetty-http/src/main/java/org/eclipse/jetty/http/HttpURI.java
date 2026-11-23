@@ -186,7 +186,7 @@ public class HttpURI
         _uri=uri;
 
         if (HttpMethod.CONNECT.is(method))
-            _path=uri;
+            parse(State.HOST,uri,0,uri.length());
         else
             parse(uri.startsWith("/")?State.PATH:State.START,uri,0,uri.length());
     }
@@ -716,9 +716,27 @@ public class HttpURI
      */
     public void setAuthority(String host, int port)
     {
+        if (host!=null && !isPathValidForAuthority(_path))
+            throw new IllegalArgumentException("Relative path with authority");
         _host=host;
         _port=port;
         _uri=null;
+    }
+
+    /* ------------------------------------------------------------ */
+    private boolean isPathValidForAuthority(String path)
+    {
+        if (path==null)
+            return true;
+        if (path.isEmpty() || "*".equals(path))
+            return true;
+        return path.startsWith("/");
+    }
+
+    /* ------------------------------------------------------------ */
+    private boolean hasAuthority()
+    {
+        return _host!=null;
     }
 
     /* ------------------------------------------------------------ */
@@ -727,6 +745,8 @@ public class HttpURI
      */
     public void setPath(String path)
     {
+        if (hasAuthority() && !isPathValidForAuthority(path))
+            throw new IllegalArgumentException("Relative path with authority");
         _uri=null;
         _path=path;
         _decodedPath=null;
@@ -735,6 +755,8 @@ public class HttpURI
     /* ------------------------------------------------------------ */
     public void setPathQuery(String path)
     {
+        if (hasAuthority() && !isPathValidForAuthority(path))
+            throw new IllegalArgumentException("Relative path with authority");
         _uri=null;
         _path=null;
         _decodedPath=null;

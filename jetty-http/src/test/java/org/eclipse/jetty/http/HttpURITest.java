@@ -101,6 +101,32 @@ public class HttpURITest
     }
 
     @Test
+    public void testCONNECT()
+    {
+        HttpURI uri = new HttpURI();
+
+        uri.parseRequestTarget("CONNECT","host:80");
+        assertThat(uri.getHost(),is("host"));
+        assertThat(uri.getPort(),is(80));
+        assertThat(uri.getPath(),nullValue());
+
+        uri.parseRequestTarget("CONNECT","host");
+        assertThat(uri.getHost(),is("host"));
+        assertThat(uri.getPort(),is(-1));
+        assertThat(uri.getPath(),nullValue());
+
+        uri.parseRequestTarget("CONNECT","192.168.0.1:8080");
+        assertThat(uri.getHost(),is("192.168.0.1"));
+        assertThat(uri.getPort(),is(8080));
+        assertThat(uri.getPath(),nullValue());
+
+        uri.parseRequestTarget("CONNECT","[::1]:8080");
+        assertThat(uri.getHost(),is("[::1]"));
+        assertThat(uri.getPort(),is(8080));
+        assertThat(uri.getPath(),nullValue());
+    }
+
+    @Test
     public void testExtB() throws Exception
     {
         for (String value: new String[]{"a","abcdABCD","\u00C0","\u697C","\uD869\uDED5","\uD840\uDC08"} )
@@ -221,5 +247,90 @@ public class HttpURITest
         assertEquals("http://user:password@example.com:8888/blah", uri.toString());
         assertEquals(uri.getAuthority(), "example.com:8888");
         assertEquals(uri.getUser(), "user:password");
+    }
+
+    @Test
+    public void testRelativePathWithAuthority()
+    {
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setAuthority("host",0);
+            httpURI.setPath("path");
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setAuthority("host",8080);
+            httpURI.setPath(";p=v/url");
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setAuthority("host",0);
+            httpURI.setPath(";");
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setAuthority("host",0);
+            httpURI.setPathQuery(";p=v/url");
+        });
+
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setPath("path");
+            httpURI.setAuthority("host",0);
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setPath(";p=v/url");
+            httpURI.setAuthority("host",8080);
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setPath(";");
+            httpURI.setAuthority("host",0);
+        });
+        assertRelativePathWithAuthorityRejected(() ->
+        {
+            HttpURI httpURI = new HttpURI();
+            httpURI.setPathQuery(";p=v/url");
+            httpURI.setAuthority("host",8080);
+        });
+
+        HttpURI uri = new HttpURI();
+        uri.setPath("*");
+        uri.setAuthority("host",0);
+        assertEquals("//host*",uri.toString());
+        uri = new HttpURI();
+        uri.setAuthority("host",0);
+        uri.setPath("*");
+        assertEquals("//host*",uri.toString());
+
+        uri = new HttpURI();
+        uri.setPath("");
+        uri.setAuthority("host",0);
+        assertEquals("//host",uri.toString());
+        uri = new HttpURI();
+        uri.setAuthority("host",0);
+        uri.setPath("");
+        assertEquals("//host",uri.toString());
+    }
+
+    private void assertRelativePathWithAuthorityRejected(Runnable mutation)
+    {
+        try
+        {
+            mutation.run();
+            fail("Expected IllegalArgumentException for relative path with authority");
+        }
+        catch (IllegalArgumentException e)
+        {
+            assertEquals("Relative path with authority",e.getMessage());
+        }
     }
 }

@@ -82,6 +82,37 @@ public class HttpClientURITest extends AbstractHttpClientServerTest
     }
 
     @Test
+    public void testPathWithPathParameter() throws Exception
+    {
+        startClient();
+
+        Request request = client.newRequest("localhost", 8080)
+                .scheme(scheme)
+                .path("/url;p=v");
+        Assert.assertEquals("/url;p=v", request.getPath());
+        Assert.assertEquals("localhost", request.getURI().getHost());
+        Assert.assertEquals(8080, request.getURI().getPort());
+
+        // A leading path parameter must not be interpreted as an authority,
+        // so the path is made absolute before the URI is built.
+        request = client.newRequest("localhost", 8080)
+                .scheme(scheme)
+                .path(";p=v/url");
+        Assert.assertEquals("/;p=v/url", request.getPath());
+        Assert.assertEquals("localhost", request.getURI().getHost());
+        Assert.assertEquals(8080, request.getURI().getPort());
+
+        // Without an absolute path, "localhost:8080;" would be parsed as the
+        // user info and "host.org" would become the host of the request.
+        request = client.newRequest("localhost", 8080)
+                .scheme(scheme)
+                .path(";@host.org/url");
+        Assert.assertEquals("/;@host.org/url", request.getPath());
+        Assert.assertEquals("localhost", request.getURI().getHost());
+        Assert.assertEquals(8080, request.getURI().getPort());
+    }
+
+    @Test
     public void testIDNHost() throws Exception
     {
         startClient();

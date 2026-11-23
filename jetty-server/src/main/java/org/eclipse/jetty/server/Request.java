@@ -1315,7 +1315,9 @@ public class Request implements HttpServletRequest
     {
         final StringBuffer url = new StringBuffer(128);
         URIUtil.appendSchemeHostPort(url,getScheme(),getServerName(),getServerPort());
-        url.append(getRequestURI());
+        String path = getRequestURI();
+        if (path != null)
+            url.append(path);
         return url;
     }
 
@@ -1754,7 +1756,19 @@ public class Request implements HttpServletRequest
         setMethod(request.getMethod());
         HttpURI uri = request.getURI();
 
-        String path = uri.getDecodedPath();
+        String encoded;
+        String path;
+        if (HttpMethod.CONNECT.is(request.getMethod()))
+        {
+            encoded = "/";
+            path = encoded;
+        }
+        else
+        {
+            encoded = uri.getPath();
+            path = uri.getDecodedPath();
+        }
+
         String info;
         if (path==null || path.length()==0)
         {
@@ -1778,6 +1792,11 @@ public class Request implements HttpServletRequest
                 throw new BadMessageException(400,"Bad URI");
             }
             info=path;
+        }
+        else if (encoded==null || !encoded.startsWith("/"))
+        {
+            setPathInfo(path);
+            throw new BadMessageException(400,"Bad URI");
         }
         else
             info = URIUtil.canonicalPath(path);// TODO should this be done prior to decoding???
